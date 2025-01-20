@@ -14,7 +14,7 @@ spring:
     config:
       server:
         git:
-          uri: https://github.com/HwaJin35/cloud-native-spring-in-action/config-repo   # 설정 데이터 저장 백엔드로 사용할 원격 깃 저장소의 URL
+          uri: https://github.com/HwaJin35/config-repo   # 설정 데이터 저장 백엔드로 사용할 원격 깃 저장소의 URL
           default-label: main     	# 서버는 이 설정에 따라 기본적으로 main 브랜치에서 설정 데이터를 반환한다.
           timeout: 5					# 원격 저장소와의 연결 시 시간 한도
           clone-on-start: true		# 서비스 시작 시 리모트 저장소의 복제본을 로컬에 저장
