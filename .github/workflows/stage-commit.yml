@@ -30,7 +30,7 @@ jobs:
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}  # 이전 단계의 결과 리포트를 가져온다.
       - name: Build, unit tests and integration tests
-        working-directory: config-service
+        # working-directory: config-service
         run: |
           chmod +x gradlew
           ./gradlew build
