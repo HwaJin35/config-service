@@ -1,6 +1,11 @@
 name: Commit Stage    # 워크플로 이름
 on: push              # 새 코드를 저장소로 푸쉬하면 워크플로를 시작
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: hwajin35/config-service
+  VERSION: latest
+
 jobs:
   build:    # 작업 고유 식별자
     name: Build and Test  # 작업의 인간 친화적 명칭
@@ -34,6 +39,46 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew build
-# 프로젝트 루트로 이동
-# 윈도우 호환성을 해결하면서 그래들 래퍼 스크립트를 실행가능하게 함
-# 코드 베이스를 컴파일, 단위 및 통합 테스트 실행하는 그래들 작업 수행
+  package:
+    name: Package and Publish
+    if: ${{ githubref == 'refs/heads/main' }}
+    needs: [ build ]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - name: Build container image
+        run: |
+          chmod +x gradlew
+          ./gradlew bootBuildImage \
+            --imageName ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+      - name: OCI image vulnerability scanning
+        uses: anchore/scan-action@v3
+        id: scan
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+          fail-build: false
+          severity-cutoff: high
+      - name: Upload vulnerability report
+        uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure()
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
+      - name: Log into container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish container image
+        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
